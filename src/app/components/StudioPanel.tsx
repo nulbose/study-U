@@ -5,7 +5,7 @@ import { Source, ActiveContent } from '../page';
 
 interface Props {
   sources: Source[];
-  selectedSourceId: number | null;
+  selectedSourceIds: number[];
   setActiveContent: (content: ActiveContent) => void;
   activeContent: ActiveContent;
 }
@@ -20,9 +20,7 @@ interface SavedItem {
 }
 
 const CONTENT_TYPES = [
-  { id: 'audio', label: 'AI 오디오 오버뷰', cardBg: '#d0f5f1', iconBg: '#a1ece4', iconColor: '#0d9488' },
   { id: 'slides', label: '슬라이드 자료', cardBg: '#fef0da', iconBg: '#fdd89a', iconColor: '#d97706' },
-  { id: 'video', label: '동영상 개요', cardBg: '#dcf5dc', iconBg: '#a8e8a8', iconColor: '#15803d' },
   { id: 'mindmap', label: '마인드맵', cardBg: '#f0e6ff', iconBg: '#d8b4fe', iconColor: '#7c3aed' },
   { id: 'report', label: '보고서', cardBg: '#dcf2e8', iconBg: '#a3e8c4', iconColor: '#166534' },
   { id: 'flashcard', label: '플래시카드', cardBg: '#fde0ea', iconBg: '#f9a8c0', iconColor: '#be123c' },
@@ -63,15 +61,13 @@ function getItemColor(type: string) {
     slides: { bg: '#fef0da', color: '#d97706' },
     infographic: { bg: '#ede8ff', color: '#6d28d9' },
     table: { bg: '#f1f3f4', color: '#3c4043' },
-    audio: { bg: '#d0f5f1', color: '#0d9488' },
-video: { bg: '#dcf5dc', color: '#15803d' },
   };
   return map[type] ?? { bg: '#f1f3f4', color: '#3c4043' };
 }
 
 export default function StudioPanel({
   sources,
-  selectedSourceId,
+  selectedSourceIds,
   setActiveContent,
   activeContent,
 }: Props) {
@@ -81,12 +77,12 @@ export default function StudioPanel({
   const hasDoc = sources.length > 0;
 
   const getPayload = () => {
-    const activeSource = selectedSourceId
-      ? sources.find((s) => s.id === selectedSourceId)
-      : sources[0];
+    const activeSources = selectedSourceIds.length > 0
+      ? sources.filter((s) => selectedSourceIds.includes(s.id))
+      : sources;
     return {
-      context: activeSource?.name || sources.map((s) => s.name).join(', '),
-      pdfText: activeSource?.text || '',
+      context: activeSources.map((s) => s.name).join(', '),
+      pdfText: activeSources.map((s) => s.text || '').filter(Boolean).join('\n\n---\n\n'),
     };
   };
 
@@ -128,11 +124,14 @@ export default function StudioPanel({
     }
 
     const payload = getPayload();
-    const sourceName =
-      (selectedSourceId
-        ? sources.find((s) => s.id === selectedSourceId)?.name
-        : sources[0]?.name
-      )?.replace(/\.pdf$/i, '') || '문서';
+    const activeSources = selectedSourceIds.length > 0
+      ? sources.filter((s) => selectedSourceIds.includes(s.id))
+      : sources;
+    const sourceName = activeSources.length === 1
+      ? activeSources[0].name.replace(/\.pdf$/i, '')
+      : activeSources.length > 1
+      ? `${activeSources.length}개 소스`
+      : '문서';
 
     setLoadingType(id);
 
@@ -279,26 +278,7 @@ export default function StudioPanel({
           `${sourceName} 데이터 표`,
           `표 · ${data.table.rows.length}행`,
           data.table
-        );} else if (id === 'audio') {
-  const res = await fetch('/api/audio', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (data.error) { alert(`오디오 생성 실패: ${data.error}`); return; }
-  addSavedItem('audio', `${sourceName} 오디오`, `오디오 · ${data.audio.duration}`, data.audio);
-
-} else if (id === 'video') {
-  const res = await fetch('/api/video', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (data.error) { alert(`동영상 생성 실패: ${data.error}`); return; }
-  addSavedItem('video', `${sourceName} 동영상`, `동영상 · ${data.video.scenes.length}장면`, data.video);
-
+        );
       } else {
         alert('곧 지원 예정인 기능입니다 ✨');
       }
@@ -333,13 +313,15 @@ export default function StudioPanel({
       <div className="flex-1 overflow-y-auto custom-scrollbar">
 
         {/* 선택된 소스 표시 */}
-        {selectedSourceId && sources.find((s) => s.id === selectedSourceId) && (
+        {selectedSourceIds.length > 0 && (
           <div
             className="mx-2 mb-2 px-2 py-1.5 rounded-xl"
             style={{ background: '#e8f0fe', color: '#1a73e8', fontSize: 'clamp(9px, 0.9vw, 11px)' }}
           >
             📄 <span className="truncate">
-              {sources.find((s) => s.id === selectedSourceId)?.name.replace(/\.pdf$/i, '')}
+              {selectedSourceIds.length === 1
+                ? sources.find((s) => s.id === selectedSourceIds[0])?.name.replace(/\.pdf$/i, '')
+                : `${selectedSourceIds.length}개 소스`}
             </span> 기반으로 생성
           </div>
         )}

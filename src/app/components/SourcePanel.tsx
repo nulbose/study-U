@@ -7,8 +7,8 @@ import { Source } from '../page';
 interface Props {
   sources: Source[];
   setSources: React.Dispatch<React.SetStateAction<Source[]>>;
-  selectedSourceId: number | null;
-  setSelectedSourceId: React.Dispatch<React.SetStateAction<number | null>>;
+  selectedSourceIds: number[];
+  setSelectedSourceIds: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 function PdfIcon() {
@@ -50,8 +50,8 @@ function WebIcon() {
 export default function SourcePanel({
   sources,
   setSources,
-  selectedSourceId,
-  setSelectedSourceId,
+  selectedSourceIds,
+  setSelectedSourceIds,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -107,7 +107,7 @@ export default function SourcePanel({
       text,
     };
     setSources((prev) => [...prev, newSource]);
-    setSelectedSourceId(newSource.id);
+    setSelectedSourceIds((prev) => [...prev, newSource.id]);
     setUploading(false);
   };
 
@@ -147,20 +147,22 @@ export default function SourcePanel({
       text,
     };
     setSources((prev) => [...prev, newSource]);
-    setSelectedSourceId(newSource.id);
+    setSelectedSourceIds((prev) => [...prev, newSource.id]);
     setUrlInput('');
     setShowUrlInput(false);
     setUrlLoading(false);
   };
 
   const handleSelect = (source: Source) => {
-    setSelectedSourceId(source.id);
+    setSelectedSourceIds((prev) =>
+      prev.includes(source.id) ? prev.filter((id) => id !== source.id) : [...prev, source.id]
+    );
   };
 
   const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     setSources((prev) => prev.filter((s) => s.id !== id));
-    if (selectedSourceId === id) setSelectedSourceId(null);
+    setSelectedSourceIds((prev) => prev.filter((sid) => sid !== id));
   };
 
   const startEdit = (e: React.MouseEvent, source: Source) => {
@@ -352,7 +354,7 @@ export default function SourcePanel({
               <div className="flex items-center justify-between px-1 pb-1">
                 <span className="text-xs" style={{ color: '#9ca3af' }}>총 {sources.length}개 소스</span>
                 <button
-                  onClick={() => { setSources([]); setSelectedSourceId(null); }}
+                  onClick={() => { setSources([]); setSelectedSourceIds([]); }}
                   className="text-xs"
                   style={{ color: '#ef4444' }}
                 >
@@ -362,7 +364,7 @@ export default function SourcePanel({
             )}
 
             {sources.map((source) => {
-              const isSelected = selectedSourceId === source.id;
+              const isSelected = selectedSourceIds.includes(source.id);
               const isEditing = editingId === source.id;
               const badge = getTypeBadge(source.type);
 
@@ -415,7 +417,7 @@ export default function SourcePanel({
                         </span>
                         {isSelected && (
                           <span className="font-medium shrink-0" style={{ color: '#1a73e8', fontSize: 10 }}>
-                            · 활성
+                            · 선택됨
                           </span>
                         )}
                       </div>
@@ -449,15 +451,17 @@ export default function SourcePanel({
                     </div>
                   </div>
 
-                  {/* 활성 소스 표시 */}
+                  {/* 선택된 소스 표시 */}
                   {isSelected && (
                     <div
                       className="mt-1.5 pt-1.5 flex items-center gap-1"
                       style={{ borderTop: '1px solid #e8f0fe' }}
                     >
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#1a73e8' }} />
+                      <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 13l4 4L19 7" stroke="#1a73e8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                       <span style={{ color: '#1a73e8', fontSize: 10 }}>
-                        이 소스를 기반으로 AI가 답변합니다
+                        AI 채팅 및 콘텐츠 생성에 포함됩니다
                       </span>
                     </div>
                   )}

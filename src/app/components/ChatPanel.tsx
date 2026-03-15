@@ -9,7 +9,7 @@ interface Props {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   notebookTitle: string;
   pdfText: string;
-  selectedSourceId: number | null;
+  selectedSourceIds: number[];
 }
 
 const MODELS = [
@@ -35,7 +35,7 @@ export default function ChatPanel({
   setMessages,
   notebookTitle,
   pdfText,
-  selectedSourceId,
+  selectedSourceIds,
 }: Props) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,10 +45,12 @@ export default function ChatPanel({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const hasDoc = sources.length > 0;
-  const selectedSource = sources.find((s) => s.id === selectedSourceId);
+  const selectedSources = sources.filter((s) => selectedSourceIds.includes(s.id));
 
-  const titleLabel = selectedSource
-    ? selectedSource.name.replace(/\.pdf$/i, '')
+  const titleLabel = selectedSources.length === 1
+    ? selectedSources[0].name.replace(/\.pdf$/i, '')
+    : selectedSources.length > 1
+    ? `${selectedSources[0].name.replace(/\.pdf$/i, '')} 외 ${selectedSources.length - 1}개`
     : sources.length === 0
     ? notebookTitle
     : sources.length === 1
@@ -77,8 +79,8 @@ export default function ChatPanel({
     setLoading(true);
 
     try {
-      const context = selectedSource
-        ? selectedSource.name
+      const context = selectedSources.length > 0
+        ? selectedSources.map((s) => s.name).join(', ')
         : sources.map((s) => s.name).join(', ');
       const activeText = pdfText || '';
       const history = messages.slice(-10).map((m) => ({
@@ -148,12 +150,12 @@ export default function ChatPanel({
           >
             {titleLabel}
           </span>
-          {selectedSource && (
+          {selectedSources.length > 0 && (
             <span
               className="text-xs px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 hidden xs:inline-flex"
               style={{ background: '#e8f0fe', color: '#1a73e8' }}
             >
-              선택됨
+              {selectedSources.length === 1 ? '선택됨' : `${selectedSources.length}개 선택`}
             </span>
           )}
         </div>
@@ -212,8 +214,10 @@ export default function ChatPanel({
             {hasDoc ? (
               <>
                 <p className="text-xs sm:text-sm" style={{ color: '#6b7280' }}>
-                  {selectedSource
-                    ? `"${selectedSource.name.replace(/\.pdf$/i, '')}" 기반으로 질문하세요`
+                  {selectedSources.length === 1
+                    ? `"${selectedSources[0].name.replace(/\.pdf$/i, '')}" 기반으로 질문하세요`
+                    : selectedSources.length > 1
+                    ? `${selectedSources.length}개 소스를 기반으로 질문하세요`
                     : '소스를 선택하거나 바로 질문하세요'}
                 </p>
                 <div className="flex flex-col gap-2 w-full max-w-sm px-2 sm:px-0">

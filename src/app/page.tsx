@@ -9,8 +9,6 @@ import ReportView from './components/ReportView';
 import SlideView from './components/SlideView';
 import InfographicView from './components/InfographicView';
 import DataTableView from './components/DataTableView';
-import AudioView from './components/AudioView';
-import VideoView from './components/VideoView';
 
 export interface Source {
   id: number;
@@ -34,24 +32,22 @@ export type ActiveContent =
   | { type: 'slides'; data: unknown }
   | { type: 'infographic'; data: unknown }
   | { type: 'table'; data: unknown }
-  | { type: 'audio'; data: unknown }
-  | { type: 'video'; data: unknown }
   | null;
 
 export default function Home() {
   const [sources, setSources] = useState<Source[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [notebookTitle] = useState<string>('새 노트북');
-  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<number[]>([]);
   const [activeContent, setActiveContent] = useState<ActiveContent>(null);
-  
+
   // 모바일 사이드바 토글 상태
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const selectedSource = sources.find((s) => s.id === selectedSourceId);
-  const pdfText = selectedSource?.text ?? '';
+  const selectedSources = sources.filter((s) => selectedSourceIds.includes(s.id));
+  const pdfText = selectedSources.map((s) => s.text || '').filter(Boolean).join('\n\n---\n\n');
 
   // 화면 크기 감지
   useEffect(() => {
@@ -130,11 +126,8 @@ export default function Home() {
         <SourcePanel
           sources={sources}
           setSources={setSources}
-          selectedSourceId={selectedSourceId}
-          setSelectedSourceId={(id) => {
-            setSelectedSourceId(id);
-            if (isMobile) setLeftSidebarOpen(false);
-          }}
+          selectedSourceIds={selectedSourceIds}
+          setSelectedSourceIds={setSelectedSourceIds}
         />
         {/* 모바일 닫기 버튼 */}
         {isMobile && leftSidebarOpen && (
@@ -168,7 +161,7 @@ export default function Home() {
               setMessages={setMessages}
               notebookTitle={notebookTitle}
               pdfText={pdfText}
-              selectedSourceId={selectedSourceId}
+              selectedSourceIds={selectedSourceIds}
             />
           </div>
         </>
@@ -180,7 +173,7 @@ export default function Home() {
             setMessages={setMessages}
             notebookTitle={notebookTitle}
             pdfText={pdfText}
-            selectedSourceId={selectedSourceId}
+            selectedSourceIds={selectedSourceIds}
           />
         </div>
       )}
@@ -199,7 +192,7 @@ export default function Home() {
       >
         <StudioPanel
           sources={sources}
-          selectedSourceId={selectedSourceId}
+          selectedSourceIds={selectedSourceIds}
           setActiveContent={(content) => {
             setActiveContent(content);
             if (isMobile) setRightSidebarOpen(false);
@@ -241,8 +234,6 @@ function ContentPanel({
     slides: '슬라이드',
     infographic: '인포그래픽',
     table: '데이터 표',
-    audio: 'AI 오디오 오버뷰',
-    video: '동영상 개요',
   };
 
   return (
@@ -308,20 +299,6 @@ function ContentPanel({
         {activeContent.type === 'table' && (
           <DataTableView
             table={activeContent.data as { title: string; description: string; headers: string[]; rows: string[][] }}
-            onClose={onClose}
-            inline
-          />
-        )}
-        {activeContent.type === 'audio' && (
-          <AudioView
-            audio={activeContent.data as { title: string; duration: string; sections: { title: string; script: string }[]; fullScript: string }}
-            onClose={onClose}
-            inline
-          />
-        )}
-        {activeContent.type === 'video' && (
-          <VideoView
-            video={activeContent.data as { title: string; duration: string; description: string; scenes: { index: number; title: string; duration: string; visual: string; narration: string; keyPoints: string[] }[]; summary: string }}
             onClose={onClose}
             inline
           />
